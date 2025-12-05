@@ -38,7 +38,7 @@
 ## Konfiguration & Kalibrierung
 
 ### BNO055 Kalibrierung
-#### Datasheet:
+#### Datasheet: [Datasheet](-ADA2472.pdf)
 Der BNO055 bietet eingebaute Kalibrierungszustände (IMU, Gyro, Accel, Magnetometer). Empfohlenes Verfahren:
 
 1. Öffne das Serial‑Logging Beispiel (mit `Adafruit_BNO055`) und beobachte den Kalibrierungs‑Status.
