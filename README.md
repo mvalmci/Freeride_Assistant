@@ -18,7 +18,7 @@
 
 6. FireBeetle ESP32-E mit MicroPython flashen (z. B. mittels `esptool.py`).
 
-7. Projektdateien aus dem Repo (`main.py`, `/lib/bno055.py`, `/lib/gps.py`) auf das Board kopieren.
+7. Projektdateien aus dem Repo (`main.py`, `/lib/bno055.py`, `/lib/micropyGPS.py`) auf das Board kopieren.
 
 8. Mit Thonny oder mpremote Konsole öffnen und prüfen, ob alle Module geladen werden.
 
