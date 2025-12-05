@@ -47,7 +47,7 @@ Der BNO055 bietet eingebaute Kalibrierungszustände (IMU, Gyro, Accel, Magnetome
 
 ### GPS Hinweise
 #### Datasheet: [Datasheet](-GY-GPS6MV2.pdf)
-
+#### [NAchlesewerk GPS Modul](https://microcontrollerslab.com/neo-6m-gps-module-esp32-micropython/)
 * GPS braucht freie Sicht zum Himmel. Indoor‑Tests sind möglich, jedoch langsam/ungenau.
 * Warte 30–60 Sekunden beim ersten Fix (A‑GPS kann den Fix beschleunigen).
 
