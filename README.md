@@ -46,7 +46,7 @@ Der BNO055 bietet eingebaute Kalibrierungszustände (IMU, Gyro, Accel, Magnetome
 3. Optional: Speichere die Kalibrierungs‑Daten in EEPROM/Flash und lade sie nach Reset.
 
 ### GPS Hinweise
-#### Datasheet:
+#### Datasheet: [Datasheet](-GY-GPS6MV2.pdf)
 
 * GPS braucht freie Sicht zum Himmel. Indoor‑Tests sind möglich, jedoch langsam/ungenau.
 * Warte 30–60 Sekunden beim ersten Fix (A‑GPS kann den Fix beschleunigen).
