@@ -168,3 +168,47 @@ while True:
 
     print(ujson.dumps(data))
 ````
+# Welche Daten werden benutzt?
+## Data-Fusion
+➡️ IMU-Daten als kontinuierliche, hochfrequente Geschwindigkeitsschätzung verwenden
+➡️ und diese Schätzung regelmäßig mit den GPS-Daten korrigieren, sobald ein gültiger Fix vorliegt.
+Das ist das Standardprinzip von „Dead Reckoning + GPS Correction“.
+Damit du ein Gefühl bekommst, hier die klare Struktur, wie du es in deinem Projekt aufbauen solltest:
+#### ✅ 1. IMU als Basis („Prediction“)
+Die IMU liefert:
+Orientierung (Quaternion oder Euler)
+Lineare Beschleunigung (idealerweise schon gravity-free, z. B. beim BNO055 verfügbar)
+Aus der IMU machst du:
+Beschleunigung → Geschwindigkeit integrieren
+So bekommst du eine vorhergesagte Geschwindigkeit, die sehr reaktionsschnell ist.
+Problem: Diese Integration driftet immer → daher brauchst du GPS.
+#### ✅ 2. GPS als Korrektur („Correction“)
+Das GPS liefert:
+Geschwindigkeit (über NMEA-Satz VTG oder aus RMC)
+Richtung
+Absolutwerte ohne drift (aber langsam und manchmal noisy)
+Du nutzt GPS nur, wenn:
+Fix vorhanden (fix = True)
+Satelliten ≥ 5
+HDOP akzeptabel (z. B. < 2.0)
+Dann korrigierst du die IMU-Geschwindigkeit regelmäßig.
+#### ✅ 3. Fusion: IMU + GPS (einfacher Ansatz)
+Die Grundformel:
+v_est = v_est + a_imu * dt      # IMU-Vorhersage
+
+if gps_ok:
+    v_est = (1 - k) * v_est + k * v_gps   # GPS-Korrektur
+Mit:
+k = 0.05–0.2
+kleiner k → IMU dominiert
+großer k → GPS dominiert
+#### 🟦 FESTE EMPFEHLUNG für dein Projekt
+👉 Ja: Rechne die Geschwindigkeit aus den IMU-Dateien / IMU-Daten selbst aus.
+👉 Ja: Korrigiere diese IMU–Geschwindigkeit dann kontinuierlich mit GPS-Daten.
+Das ist der beste Kompromiss:
+IMU = schön glatt + schnell
+GPS = absolut + driftkorrektur
+Du bekommst damit:
+sofortige Reaktion
+keinen Drift
+stabilen Wert auch bei schlechten GPS-Signalen
