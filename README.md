@@ -1,6 +1,6 @@
 # Freeride Assistant
 
-**Freeride Assistant** ist ein Open‑Source Projekt zur Datenerfassung und Unterstützung beim Freeriden (z. B. Mountainbike, Snowboard, etc.). Ziel ist es, valide Sensordaten (Lage, Beschleunigung, GPS‑Position, Tempo) in Echtzeit zu erfassen, zu verarbeiten und zu protokollieren. Dieses Repository enthält Code, Schaltpläne und Beispielkonfigurationen für den Einsatz mit dem DFRobot FireBeetle ESP32, dem Adafruit BNO055 IMU und dem u‑blox NEO‑6M GPS Modul.
+**Freeride Assistant** ist ein Open‑Source Projekt zur Datenerfassung und Unterstützung beim Freeriden. Ziel ist es, valide Sensordaten (Lage, Beschleunigung, GPS‑Position, Tempo) in Echtzeit zu erfassen, zu verarbeiten und zu protokollieren. Dieses Repository enthält Code, Schaltpläne und Beispielkonfigurationen für den Einsatz mit dem DFRobot FireBeetle ESP32, dem Adafruit BNO055 IMU und dem u‑blox NEO‑6M GPS Modul.
 
 ---
 
