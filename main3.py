@@ -47,6 +47,7 @@ freefall_start = None
 air_start_time = None
 airtime_ms = 0
 vx_absprung = None
+takeoff_angle = None
 
 # =====================================================
 # Timing
@@ -89,8 +90,10 @@ while True:
     # -------------------------------------------------
     try:
         accel = imu.accel()  # m/s² (linear)
+        euler = imu.euler()  # Orientierung (Heading, Roll, Pitch)
     except Exception:
         accel = (0.0, 0.0, 0.0)
+        euler = None
 
     ax, ay, az = accel
     acc_mag = (ax*ax + ay*ay + az*az) ** 0.5
@@ -110,7 +113,16 @@ while True:
             if time.ticks_diff(now, freefall_start) > FREEFALL_TIME_MS:
                 state = AIR
                 air_start_time = now
+                
+                # Absprungsgeschwindigkeit
                 vx_absprung = vx_avg_3s
+                
+                # Absprungwinkel (Pitch)
+                if euler is not None:
+                    takeoff_angle = euler[2] #Pitch (also Absprungwiunkel) in Grad
+                else:
+                    takeoff_angle = None
+                    
         else:
             state = GROUND
 
@@ -136,7 +148,9 @@ while True:
             "| vx_avg:", round(vx_avg_3s, 2),
             "| acc_mag:", round(acc_mag, 2),
             "| airtime(s):", round(airtime_ms / 1000, 2),
-            "| vx_absprung:", vx_absprung
+            "| vx_absprung:", vx_absprung,
+            "| takeoff_angle:", takeoff_angle,
+            "| pitch:", euler[2]
         )
 
     time.sleep_ms(10)
