@@ -26,9 +26,9 @@ WINDOW_MS = 3000
 # =====================================================
 # Freefall / Airtime Parameter
 # =====================================================
-FREEFALL_ACC_THRESHOLD = 1.5   # m/s²
-FREEFALL_TIME_MS = 150         # ms
-LANDING_ACC_THRESHOLD = 15.0   # m/s²
+FREEFALL_ACC_THRESHOLD = 1.5   # m/s² - auf imu wirkt keine Erdbeschleunigung mehr
+FREEFALL_TIME_MS = 150         # "Filter" bzw Puffer der kleine Stöße herausfiltert und erst eine Sprung als solchen erkennt wenn er über 0.15s dauert
+LANDING_ACC_THRESHOLD = 15.0   # m/s² (Stoß)
 
 # =====================================================
 # State Machine
@@ -47,7 +47,7 @@ freefall_start = None
 air_start_time = None
 airtime_ms = 0
 vx_absprung = None
-takeoff_angle = None
+takeoff_angle = None # Pitch des Euler Vektors
 
 # =====================================================
 # Timing
@@ -95,8 +95,8 @@ while True:
         accel = (0.0, 0.0, 0.0)
         euler = None
 
-    ax, ay, az = accel
-    acc_mag = (ax*ax + ay*ay + az*az) ** 0.5
+    ax, ay, az = accel # Beschleunigungen in x, y, und z Richtung
+    acc_mag = (ax*ax + ay*ay + az*az) ** 0.5 # Betrag aller drei Beschleunigungen, da z.B. Gravitation bei einer Drehung nicht konstant auf z-Achse wirkt sondern sich verteilt
 
     # -------------------------------------------------
     # State Machine + Airtime
@@ -110,16 +110,16 @@ while True:
 
     elif state == TAKEOFF:
         if acc_mag < FREEFALL_ACC_THRESHOLD:
-            if time.ticks_diff(now, freefall_start) > FREEFALL_TIME_MS:
+            if time.ticks_diff(now, freefall_start) > FREEFALL_TIME_MS: # siehe oben... Puffer für kleine "hopser"
                 state = AIR
                 air_start_time = now
                 
                 # Absprungsgeschwindigkeit
-                vx_absprung = vx_avg_3s
+                vx_absprung = vx_avg_3s # gemittelte Geschwindigkeit über 3s - wird in der Rechnung als v_0 (Anfangsgeschwindigkeit) verwendet
                 
                 # Absprungwinkel (Pitch)
                 if euler is not None:
-                    takeoff_angle = euler[2] #Pitch (also Absprungwiunkel) in Grad
+                    takeoff_angle = euler[2] #Pitch (also Absprungwiunkel) in Grad - wird in der Rechnung als Absprung(-wurf)winkel verwendet
                 else:
                     takeoff_angle = None
                     
@@ -131,12 +131,13 @@ while True:
         if acc_mag > LANDING_ACC_THRESHOLD:
             state = LANDING
 
+    # Zusätzlicher landing State um z.B Federn aus den Beinen und andere Störfaktoren herauszufiltern - damit bei einem "wippenden" aufkommen im Schnee nicht wild zwischen den States herumgesprungen wird
     elif state == LANDING:
         if acc_mag > 9.0:
             state = GROUND
 
     # -------------------------------------------------
-    # Ausgabe (1 Hz)
+    # Debug Ausgabe (1 Hz)
     # -------------------------------------------------
     if time.ticks_diff(now, last_print) > 1000:
         last_print = now
