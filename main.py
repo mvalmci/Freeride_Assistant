@@ -2,6 +2,9 @@ import time
 from machine import I2C, Pin, UART
 from bno055 import BNO055
 from micropyGPS import MicropyGPS
+import math
+import ujson
+
 
 # =====================================================
 # IMU – BNO055 (I2C)
@@ -20,8 +23,8 @@ gps = MicropyGPS(local_offset=1)
 # =====================================================
 vx = 0.0
 vx_buffer = []
-vx_avg_3s = 0.0
-WINDOW_MS = 3000
+vx_avg_1s = 0.0
+WINDOW_MS = 1000
 
 # =====================================================
 # Freefall / Airtime Parameter
@@ -56,6 +59,18 @@ last_print = time.ticks_ms()
 
 print("System gestartet: GPS + IMU + Airtime")
 
+#======================================================
+# Abspeichern der Daten
+#======================================================
+def save_jump(data):
+    try:
+        # Datei öffnen oder erstellen
+        with open("jumps.json", "a") as f:
+            f.write(ujson.dumps(data) + "\n")
+    except Exception as e:
+        print("Fehler beim Speichern:", e)
+
+    
 # =====================================================
 # Hauptloop
 # =====================================================
@@ -63,17 +78,13 @@ while True:
     now = time.ticks_ms()
 
     # -------------------------------------------------
-    # GPS lesen
+    # Testgeschwindigkeit (GPS simuliert)
     # -------------------------------------------------
-    data = uart.read()
-    if data:
-        for b in data:
-            gps.update(chr(b))
-        if gps.valid:
-            vx = gps.speed[2]  # m/s
+    import random
+    vx = 10.0 + random.uniform(-1, 1) # m/s
 
     # -------------------------------------------------
-    # vx-Puffer (3 Sekunden Mittelwert)
+    # vx-Puffer (1 Sekunden Mittelwert)
     # -------------------------------------------------
     vx_buffer.append((now, vx))
 
@@ -81,9 +92,9 @@ while True:
         vx_buffer.pop(0)
 
     if vx_buffer:
-        vx_avg_3s = sum(v for _, v in vx_buffer) / len(vx_buffer)
+        vx_avg_1s = sum(v for _, v in vx_buffer) / len(vx_buffer)
     else:
-        vx_avg_3s = 0.0
+        vx_avg_1s = 0.0
 
     # -------------------------------------------------
     # IMU lesen
@@ -115,7 +126,7 @@ while True:
                 air_start_time = now
                 
                 # Absprungsgeschwindigkeit
-                vx_absprung = vx_avg_3s # gemittelte Geschwindigkeit über 3s - wird in der Rechnung als v_0 (Anfangsgeschwindigkeit) verwendet
+                vx_absprung = vx_avg_1s # gemittelte Geschwindigkeit über 3s - wird in der Rechnung als v_0 (Anfangsgeschwindigkeit) verwendet
                 
                 # Absprungwinkel (Pitch)
                 if euler is not None:
@@ -130,6 +141,72 @@ while True:
         airtime_ms = time.ticks_diff(now, air_start_time)
         if acc_mag > LANDING_ACC_THRESHOLD:
             state = LANDING
+            
+            #------------------------------------------
+            # Sprunghöhenberechnung
+            #------------------------------------------
+            if vx_absprung is not None and takeoff_angle is not None:
+                g = 9.81
+                t_total = airtime_ms / 1000.0
+                alpha_rad = takeoff_angle * 3.14159265 / 180.0
+                
+                # vertikale Anfangsgeschwindigkeit
+                v0y = vx_absprung * math.sin(alpha_rad)
+                
+                # Aufstiegszeit
+                t1 = v0y / g
+                
+                # Höhe bis Scheitelpunkt
+                h1 = 0.5 * g * t1 * t1
+                
+                # Fallzeit
+                t2 = t_total - t1
+                if t2 < 0:
+                    t2 = 0 # Sicherheitscheck
+                
+                # gesamte Fallhöhe
+                hges = 0.5 * g * t2 * t2
+                
+                # tatsächliche Sprunghöhe
+                h2 = hges - h1
+                jump_height = h1 + h2
+            
+                #--------------------------------------
+                # Sprungweitenberechnung
+                #--------------------------------------
+                #horizontale Werte
+                x_ges = vx_absprung * math.cos(alpha_rad) * t_total
+                
+                # diagonale Weite mit Pythagoras
+                c_ges = math.sqrt(x_ges * x_ges + jump_height * jump_height)
+                
+                jump_data = {
+                    "airtime_s": round(t_total, 3),
+                    "v0": round(vx_absprung, 2),
+                    "angle_deg": round(takeoff_angle, 2),
+                    "height_m": round(jump_height, 3),
+                    "distance_x_m": round(x_ges, 3),
+                    "distance_diag_m": round(c_ges, 3),
+                    "timestamp_ms": now
+                }
+
+                save_jump(jump_data)
+
+                
+                print("===== SPRUNG ERKANNT =====")
+                print("Airtime:", round(t_total, 3), "s")
+                print("Absprunggeschwindigkeit:", round(vx_absprung, 2), "m/s")
+                print("Absprungwinkel:", round(takeoff_angle, 2), "°")
+                print("Sprunghöhe:", round(jump_height, 3), "m")
+                print("Weite (horizontal):", round(x_ges, 3), "m")
+                print("Weite (diagonal):", round(c_ges, 3), "m")
+                print("==========================")
+
+                
+            else:
+                jump_height = None
+                x_ges = None
+                c_ges = None
 
     # Zusätzlicher landing State um z.B Federn aus den Beinen und andere Störfaktoren herauszufiltern - damit bei einem "wippenden" aufkommen im Schnee nicht wild zwischen den States herumgesprungen wird
     elif state == LANDING:
@@ -146,7 +223,7 @@ while True:
             "| fix:", gps.fix_stat,
             "| sats:", gps.satellites_in_use,
             "| vx:", round(vx, 2),
-            "| vx_avg:", round(vx_avg_3s, 2),
+            "| vx_avg:", round(vx_avg_1s, 2),
             "| acc_mag:", round(acc_mag, 2),
             "| airtime(s):", round(airtime_ms / 1000, 2),
             "| vx_absprung:", vx_absprung,
@@ -155,3 +232,4 @@ while True:
         )
 
     time.sleep_ms(10)
+
